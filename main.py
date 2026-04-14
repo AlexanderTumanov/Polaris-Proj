@@ -32,6 +32,7 @@ def plot_eigens(H, N):
         plt.plot(range(N), eigenvectors[:,k]**2, label=f"State {k}")    # eigenvectors**2 vs. site #
     
     plt.legend()
+    plt.title("Eigenstates vs Site #")
     plt.xlabel("Site #")
     plt.ylabel("Probability")
     #plt.show()
@@ -44,7 +45,9 @@ def DOS(evals, gamma):
     
     for En in evals:
         dos += Lorentzian(E_grid, En, gamma)
-    dos /= len(evals)   # Normalize
+        
+    dos /= np.trapezoid(dos, E_grid)   # Normalize
+    print(np.trapezoid(dos, E_grid)) # Integral of dos, should = 1.0
     
     plt.figure(2)
     plt.plot(E_grid, dos, label="DOS")    # Plotting DOS
@@ -67,13 +70,14 @@ def Lorentzian(E, En, gamma):   # Approximation of Delta Function
 def LDOS(evals, eigenvects, gamma, N):
     E_grid = np.linspace(evals.min() - 1, evals.max() + 1, num=500)
     ldos = np.zeros_like(E_grid)
-    sites = np.linspace(0, N - 1, 7, dtype=int)    # Some evenly-space list of sites
+    sites = [0, 1, 10, 50] 
     
     plt.figure(3)
     for i in range(len(sites)):
         for n in range(len(evals)):
             ldos += (eigenvects[sites[i], n]**2) * Lorentzian(E_grid, evals[n], gamma)    # Psi^2 * delta
-        plt.plot(E_grid, ldos, label=f"site {sites[i] + 1}")
+        plt.plot(E_grid, ldos, label=f"site {sites[i]}")
+        print(np.trapezoid(ldos, E_grid)) # Integral of ldos, should = 1.0
         ldos = np.zeros_like(E_grid)
     
     plt.legend()
@@ -84,13 +88,28 @@ def LDOS(evals, eigenvects, gamma, N):
     
     return ldos
 
+def LDOS_spatial(evals, evects, gamma, E, N):
+    ldos_spatial = np.zeros(N)
+    
+    plt.figure(5)
+    for n in range(len(evals)):
+        ldos_spatial += (evects[:, n]**2) * Lorentzian(E, evals[n], gamma)
+    ldos_spatial /= np.trapezoid(ldos_spatial, range(N)) # Normalize
+    
+    plt.plot(range(N), ldos_spatial)
+    plt.xlabel("Site")
+    plt.ylabel(f"LDOS at E={E}")
+    plt.title("Spatial LDOS")
+    
+    return ldos_spatial
+
 # Variables
-N = 1000
+N = 100
 t = 1   
 condition = "open"  # "periodic" or "open"
 nn = 1      # 0 for no jumping
 eps = np.full(N, 0)
-gamma = 0.1
+gamma = 0.15
 
 
 H = H_constcut(N, t, eps, condition, nn)
@@ -101,9 +120,11 @@ dos = DOS(eigenvalues, gamma)
 
 ldos = LDOS(eigenvalues, eigenvectors, gamma, N)
 
+ldos_spat = LDOS_spatial(eigenvalues, eigenvectors, gamma, 0, N)
+
 print(H)
 
-plt.figure(4)
+plt.figure(6)
 plt.plot(range(N), eigenvalues, label="Eigenvalues")
 plt.show()
 
